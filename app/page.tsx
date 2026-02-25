@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import CustomCursor from "./components/CustomCursor";
 import Loader from "./components/Loader";
 import Navbar from "./components/Navbar";
@@ -13,8 +14,18 @@ import Footer from "./components/Footer";
 import OnboardingPopup from "./components/OnboardingPopup";
 import ScrollReveal from "./components/ScrollReveal";
 
-export default function Home() {
+function HomeContent() {
   const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const searchParams = useSearchParams();
+
+  // Auto-open popup on Twitter callback redirect
+  useEffect(() => {
+    const onboarding = searchParams.get("onboarding");
+    if (onboarding === "step3") {
+      setOnboardingOpen(true);
+      document.body.style.overflow = "hidden";
+    }
+  }, [searchParams]);
 
   const openOnboarding = () => {
     setOnboardingOpen(true);
@@ -77,5 +88,13 @@ export default function Home() {
 
       <OnboardingPopup open={onboardingOpen} onClose={closeOnboarding} />
     </>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={null}>
+      <HomeContent />
+    </Suspense>
   );
 }

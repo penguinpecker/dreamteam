@@ -8,6 +8,8 @@
     "start": "next start"
   },
   "dependencies": {
+    "@privy-io/react-auth": "^3.14.1",
+    "@supabase/supabase-js": "^2.49.1",
     "@tailwindcss/postcss": "^4.1.7",
     "@types/node": "^22.15.18",
     "@types/react": "^19.1.3",
