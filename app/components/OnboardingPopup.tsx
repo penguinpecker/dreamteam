@@ -187,21 +187,40 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
   const handleConnectTwitter = async () => {
     setError("");
     setConnecting(true);
+
+    // Check if Privy already has Twitter linked (avoid "already linked" error modal)
+    if (user?.twitter?.username) {
+      const twitter = user.twitter.username;
+      setTwitterHandle(twitter);
+      const savedUser = await saveToSupabase(walletAddress, twitter);
+      if (savedUser?.ref_code) {
+        setRefLink(`mydreamteam.xyz/join/${savedUser.ref_code}`);
+        setQueuePosition(savedUser.queue_position || 0);
+      }
+      setStep(3);
+      setConnecting(false);
+      return;
+    }
+
+    // Check if our DB already has this wallet with Twitter
+    if (walletAddress) {
+      const existingUser = await checkExistingUser(walletAddress);
+      if (existingUser?.twitter_handle && existingUser?.ref_code) {
+        setTwitterHandle(existingUser.twitter_handle);
+        setRefLink(`mydreamteam.xyz/join/${existingUser.ref_code}`);
+        setQueuePosition(existingUser.queue_position || 0);
+        setStep(3);
+        setConnecting(false);
+        return;
+      }
+    }
+
+    // Only call linkTwitter if not already linked anywhere
     try {
       await linkTwitter();
     } catch (err: any) {
       console.error("Twitter link error:", err);
-      if (walletAddress) {
-        const existingUser = await checkExistingUser(walletAddress);
-        if (existingUser?.twitter_handle && existingUser?.ref_code) {
-          setTwitterHandle(existingUser.twitter_handle);
-          setRefLink(`mydreamteam.xyz/join/${existingUser.ref_code}`);
-          setQueuePosition(existingUser.queue_position || 0);
-          setStep(3);
-          setConnecting(false);
-          return;
-        }
-      }
+      // After error, check again in case it partially worked
       if (user?.twitter?.username) {
         const twitter = user.twitter.username;
         setTwitterHandle(twitter);
