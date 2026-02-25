@@ -58,6 +58,11 @@ function generateRefCode(handle: string): string {
   return `${handle}-${suffix}`;
 }
 
+// Normalize wallet address to lowercase for consistent DB lookups
+function normalizeAddress(addr: string): string {
+  return addr ? addr.toLowerCase() : "";
+}
+
 export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps) {
   const [step, setStep] = useState(1);
   const [connecting, setConnecting] = useState(false);
@@ -81,10 +86,11 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
 
   const saveToSupabase = useCallback(async (wallet: string, twitter?: string) => {
     try {
+      const normalized = normalizeAddress(wallet);
       const walletRes = await fetch("/api/user/connect-wallet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress: wallet, referredBy: getReferredBy() }),
+        body: JSON.stringify({ walletAddress: normalized, referredBy: getReferredBy() }),
       });
       const walletData = await walletRes.json();
 
@@ -97,7 +103,7 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
         const res = await fetch("/api/user/connect-twitter", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ walletAddress: wallet, twitterHandle: twitter, refCode }),
+          body: JSON.stringify({ walletAddress: normalized, twitterHandle: twitter, refCode }),
         });
         const data = await res.json();
         if (data.user) {
@@ -122,10 +128,11 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
 
   const checkExistingUser = useCallback(async (wallet: string) => {
     try {
+      const normalized = normalizeAddress(wallet);
       const res = await fetch("/api/user/connect-wallet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress: wallet }),
+        body: JSON.stringify({ walletAddress: normalized }),
       });
       const data = await res.json();
       return data.user;
@@ -134,12 +141,13 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
     }
   }, []);
 
+  // Watch Privy auth state and advance steps
   useEffect(() => {
     if (!ready || !authenticated || !user) return;
 
     const wallet = wallets[0]?.address || user.wallet?.address;
     if (wallet && !walletAddress) {
-      setWalletAddress(wallet);
+      setWalletAddress(normalizeAddress(wallet));
     }
 
     const twitter = user.twitter?.username;
@@ -156,8 +164,10 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
         setConnecting(false);
       });
     } else if (wallet && !twitter && step === 1) {
+      // Check if this wallet already has Twitter linked in our DB
       checkExistingUser(wallet).then((existingUser) => {
         if (existingUser?.twitter_handle && existingUser?.ref_code) {
+          // Already completed onboarding — skip straight to step 3
           setTwitterHandle(existingUser.twitter_handle);
           setRefLink(`mydreamteam.xyz/join/${existingUser.ref_code}`);
           setQueuePosition(existingUser.queue_position || 0);
@@ -184,12 +194,14 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
     }
   };
 
+  // *** THE KEY FIX: Check BEFORE calling linkTwitter() to prevent Privy error modal ***
   const handleConnectTwitter = async () => {
     setError("");
     setConnecting(true);
 
-    // Check if Privy already has Twitter linked (avoid "already linked" error modal)
+    // CHECK 1: Does Privy already have Twitter on this user?
     if (user?.twitter?.username) {
+      console.log("Twitter already linked in Privy:", user.twitter.username);
       const twitter = user.twitter.username;
       setTwitterHandle(twitter);
       const savedUser = await saveToSupabase(walletAddress, twitter);
@@ -202,10 +214,13 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
       return;
     }
 
-    // Check if our DB already has this wallet with Twitter
+    // CHECK 2: Does our DB already have this wallet with Twitter?
     if (walletAddress) {
+      console.log("Checking DB for existing user with wallet:", walletAddress);
       const existingUser = await checkExistingUser(walletAddress);
+      console.log("DB check result:", existingUser);
       if (existingUser?.twitter_handle && existingUser?.ref_code) {
+        console.log("Found existing user with Twitter, skipping to step 3");
         setTwitterHandle(existingUser.twitter_handle);
         setRefLink(`mydreamteam.xyz/join/${existingUser.ref_code}`);
         setQueuePosition(existingUser.queue_position || 0);
@@ -215,12 +230,13 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
       }
     }
 
-    // Only call linkTwitter if not already linked anywhere
+    // CHECK 3: Only NOW call linkTwitter() — user genuinely hasn't linked yet
+    console.log("No existing Twitter found, calling linkTwitter()");
     try {
       await linkTwitter();
     } catch (err: any) {
       console.error("Twitter link error:", err);
-      // After error, check again in case it partially worked
+      // After error, re-check in case it partially worked
       if (user?.twitter?.username) {
         const twitter = user.twitter.username;
         setTwitterHandle(twitter);
