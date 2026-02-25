@@ -22,10 +22,26 @@ function HomeContent() {
 
   // Auto-open popup on Twitter callback redirect
   useEffect(() => {
+    // Check URL param (legacy)
     const onboarding = searchParams.get("onboarding");
     if (onboarding === "step3") {
       setOnboardingOpen(true);
       document.body.style.overflow = "hidden";
+      return;
+    }
+
+    // Check sessionStorage for Twitter OAuth return
+    try {
+      const saved = sessionStorage.getItem("dreamteam_onboarding");
+      if (saved) {
+        const state = JSON.parse(saved);
+        if (state.inTwitterOAuth) {
+          setOnboardingOpen(true);
+          document.body.style.overflow = "hidden";
+        }
+      }
+    } catch (e) {
+      // ignore
     }
   }, [searchParams]);
 
@@ -37,6 +53,8 @@ function HomeContent() {
   const closeOnboarding = () => {
     setOnboardingOpen(false);
     document.body.style.overflow = "";
+    // Clear any saved OAuth state so popup doesn't auto-reopen
+    try { sessionStorage.removeItem("dreamteam_onboarding"); } catch (e) { /* ignore */ }
   };
 
   return (

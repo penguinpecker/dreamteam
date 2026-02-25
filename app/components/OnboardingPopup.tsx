@@ -182,6 +182,55 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
     }
   }, [ready, authenticated, user, wallets, step, walletAddress, twitterHandle, saveToSupabase, checkExistingUser]);
 
+  // Restore onboarding state after Twitter OAuth redirect
+  useEffect(() => {
+    if (!ready) return;
+    try {
+      const saved = sessionStorage.getItem("dreamteam_onboarding");
+      if (!saved) return;
+      const state = JSON.parse(saved);
+      if (!state.inTwitterOAuth) return;
+
+      console.log("Detected return from Twitter OAuth, restoring state:", state);
+
+      // Restore wallet address from before the redirect
+      if (state.walletAddress && !walletAddress) {
+        setWalletAddress(state.walletAddress);
+      }
+
+      // If Privy has the twitter linked now, advance to step 3
+      if (authenticated && user?.twitter?.username) {
+        const twitter = user.twitter.username;
+        const wallet = state.walletAddress || walletAddress;
+        setTwitterHandle(twitter);
+        if (wallet) {
+          saveToSupabase(wallet, twitter).then((savedUser) => {
+            if (savedUser?.ref_code) {
+              setRefLink(`mydreamteam.xyz/join/${savedUser.ref_code}`);
+              setQueuePosition(savedUser.queue_position || 0);
+            }
+            setStep(3);
+            setConnecting(false);
+          });
+        } else {
+          setStep(3);
+          setConnecting(false);
+        }
+        sessionStorage.removeItem("dreamteam_onboarding");
+      } else if (authenticated && !user?.twitter?.username) {
+        // Came back but Twitter didn't link — restore to step 2
+        setStep(2);
+        setConnecting(false);
+        sessionStorage.removeItem("dreamteam_onboarding");
+      }
+      // If not yet authenticated, Privy is still initializing — 
+      // the auth-watching useEffect above will handle it
+    } catch (e) {
+      console.error("Error restoring onboarding state:", e);
+      sessionStorage.removeItem("dreamteam_onboarding");
+    }
+  }, [ready, authenticated, user, walletAddress, saveToSupabase]);
+
   const handleConnectWallet = async () => {
     setError("");
     setConnecting(true);
@@ -231,8 +280,13 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
     }
 
     // CHECK 3: Only NOW call linkTwitter() — user genuinely hasn't linked yet
+    // Save state to sessionStorage BEFORE redirect so we can restore on return
     console.log("No existing Twitter found, calling linkTwitter()");
     try {
+      sessionStorage.setItem(
+        "dreamteam_onboarding",
+        JSON.stringify({ inTwitterOAuth: true, walletAddress, step: 2 })
+      );
       await linkTwitter();
     } catch (err: any) {
       console.error("Twitter link error:", err);
