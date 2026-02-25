@@ -13,10 +13,12 @@ import FinalCTA from "./components/FinalCTA";
 import Footer from "./components/Footer";
 import OnboardingPopup from "./components/OnboardingPopup";
 import ScrollReveal from "./components/ScrollReveal";
+import { usePrivy } from "@privy-io/react-auth";
 
 function HomeContent() {
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const searchParams = useSearchParams();
+  const { ready, authenticated, user } = usePrivy();
 
   // Auto-open popup on Twitter callback redirect
   useEffect(() => {
