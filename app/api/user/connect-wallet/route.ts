@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 export async function POST(req: NextRequest) {
+  const supabase = getSupabase();
   const { walletAddress, referredBy } = await req.json();
 
   if (!walletAddress) {
     return NextResponse.json({ error: "Wallet address required" }, { status: 400 });
   }
 
-  // Check if user already exists
   const { data: existing } = await supabase
     .from("users")
     .select("*")
@@ -24,7 +26,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ user: existing });
   }
 
-  // Insert new user (queue_position auto-assigned by trigger)
   const { data, error } = await supabase
     .from("users")
     .insert({
