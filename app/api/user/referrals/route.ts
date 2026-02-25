@@ -18,7 +18,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "ref_code or wallet required" }, { status: 400 });
     }
 
-    // Find the referrer
     let referrer;
     if (refCode) {
       const { data } = await supabase
@@ -40,7 +39,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Get all users they referred
     const { data: referrals, error } = await supabase
       .from("referrals")
       .select(`

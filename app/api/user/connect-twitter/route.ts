@@ -40,7 +40,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ user: data });
     }
 
-    // Update with twitter info
     const { data, error } = await supabase
       .from("users")
       .update({
@@ -56,9 +55,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Now create the referral record if this user was referred
     if (data?.referred_by) {
-      // Find the referrer
       const { data: referrer } = await supabase
         .from("users")
         .select("id")
@@ -66,7 +63,6 @@ export async function POST(req: NextRequest) {
         .maybeSingle();
 
       if (referrer) {
-        // Check if referral already exists
         const { data: existingRef } = await supabase
           .from("referrals")
           .select("id")

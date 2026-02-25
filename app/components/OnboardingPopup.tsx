@@ -69,21 +69,18 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
   const [twitterHandle, setTwitterHandle] = useState("");
   const refInputRef = useRef<HTMLInputElement>(null);
 
-  const { ready, authenticated, user, login, linkTwitter, logout } = usePrivy();
+  const { ready, authenticated, user, login, linkTwitter } = usePrivy();
   const { wallets } = useWallets();
   const searchParams = useSearchParams();
 
-  // Get referral code from URL
   const getReferredBy = (): string => {
     if (typeof window === "undefined") return "";
     const url = new URL(window.location.href);
     return url.searchParams.get("ref") || "";
   };
 
-  // Save user to Supabase
   const saveToSupabase = useCallback(async (wallet: string, twitter?: string) => {
     try {
-      // First save/check wallet
       const walletRes = await fetch("/api/user/connect-wallet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -95,7 +92,6 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
         setQueuePosition(walletData.user.queue_position);
       }
 
-      // If twitter handle provided, update via separate call
       if (twitter) {
         const refCode = walletData.user?.ref_code || generateRefCode(twitter);
         const res = await fetch("/api/user/connect-twitter", {
@@ -105,10 +101,16 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
         });
         const data = await res.json();
         if (data.user) {
-          setRefLink(`dreamteam.gg/join/${data.user.ref_code}`);
+          setRefLink(`mydreamteam.xyz/join/${data.user.ref_code}`);
           setQueuePosition(data.user.queue_position || queuePosition);
           return data.user;
         }
+      }
+
+      if (walletData.user?.twitter_handle && walletData.user?.ref_code) {
+        setRefLink(`mydreamteam.xyz/join/${walletData.user.ref_code}`);
+        setTwitterHandle(walletData.user.twitter_handle);
+        return walletData.user;
       }
 
       return walletData.user;
@@ -118,47 +120,63 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
     }
   }, [queuePosition]);
 
-  // Watch Privy auth state and advance steps
+  const checkExistingUser = useCallback(async (wallet: string) => {
+    try {
+      const res = await fetch("/api/user/connect-wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ walletAddress: wallet }),
+      });
+      const data = await res.json();
+      return data.user;
+    } catch {
+      return null;
+    }
+  }, []);
+
   useEffect(() => {
     if (!ready || !authenticated || !user) return;
 
-    // Check for wallet
     const wallet = wallets[0]?.address || user.wallet?.address;
     if (wallet && !walletAddress) {
       setWalletAddress(wallet);
     }
 
-    // Check for twitter
     const twitter = user.twitter?.username;
     if (twitter && !twitterHandle) {
       setTwitterHandle(twitter);
     }
 
-    // Auto-advance based on what's connected
     if (wallet && twitter && step < 3) {
       saveToSupabase(wallet, twitter).then((savedUser) => {
         if (savedUser?.ref_code) {
-          setRefLink(`dreamteam.gg/join/${savedUser.ref_code}`);
+          setRefLink(`mydreamteam.xyz/join/${savedUser.ref_code}`);
         }
         setStep(3);
         setConnecting(false);
       });
     } else if (wallet && !twitter && step === 1) {
-      saveToSupabase(wallet).then(() => {
-        setStep(2);
+      checkExistingUser(wallet).then((existingUser) => {
+        if (existingUser?.twitter_handle && existingUser?.ref_code) {
+          setTwitterHandle(existingUser.twitter_handle);
+          setRefLink(`mydreamteam.xyz/join/${existingUser.ref_code}`);
+          setQueuePosition(existingUser.queue_position || 0);
+          setStep(3);
+        } else {
+          saveToSupabase(wallet).then(() => {
+            setStep(2);
+          });
+        }
         setConnecting(false);
       });
     }
-  }, [ready, authenticated, user, wallets, step, walletAddress, twitterHandle, saveToSupabase]);
+  }, [ready, authenticated, user, wallets, step, walletAddress, twitterHandle, saveToSupabase, checkExistingUser]);
 
-  // Step 1: Connect Wallet via Privy
   const handleConnectWallet = async () => {
     setError("");
     setConnecting(true);
     try {
-      login({
-        loginMethods: ["wallet"],
-      });
+      login({ loginMethods: ["wallet"] });
     } catch (err) {
       console.error("Login error:", err);
       setError("Failed to connect wallet.");
@@ -166,15 +184,37 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
     }
   };
 
-  // Step 2: Link Twitter via Privy
   const handleConnectTwitter = async () => {
     setError("");
     setConnecting(true);
     try {
-      linkTwitter();
-    } catch (err) {
+      await linkTwitter();
+    } catch (err: any) {
       console.error("Twitter link error:", err);
-      setError("Failed to connect Twitter.");
+      if (walletAddress) {
+        const existingUser = await checkExistingUser(walletAddress);
+        if (existingUser?.twitter_handle && existingUser?.ref_code) {
+          setTwitterHandle(existingUser.twitter_handle);
+          setRefLink(`mydreamteam.xyz/join/${existingUser.ref_code}`);
+          setQueuePosition(existingUser.queue_position || 0);
+          setStep(3);
+          setConnecting(false);
+          return;
+        }
+      }
+      if (user?.twitter?.username) {
+        const twitter = user.twitter.username;
+        setTwitterHandle(twitter);
+        const savedUser = await saveToSupabase(walletAddress, twitter);
+        if (savedUser?.ref_code) {
+          setRefLink(`mydreamteam.xyz/join/${savedUser.ref_code}`);
+          setQueuePosition(savedUser.queue_position || 0);
+        }
+        setStep(3);
+        setConnecting(false);
+        return;
+      }
+      setError("Failed to connect Twitter. Please try again.");
       setConnecting(false);
     }
   };
@@ -192,7 +232,7 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
 
   const shareOnTwitter = () => {
     const text = encodeURIComponent(
-      `I just secured my spot in the DreamTeam fantasy arena 🏏⚽🛡️\n\nJoin with my link and we both climb the leaderboard:\nhttps://${refLink}\n\n#DreamTeam #FantasySports #Web3`
+      `I just secured my spot in the DreamTeam fantasy arena \u{1F3CF}\u{26BD}\u{1F6E1}\n\nJoin with my link and we both climb the leaderboard:\nhttps://${refLink}\n\n#DreamTeam #FantasySports #Web3`
     );
     window.open(`https://twitter.com/intent/tweet?text=${text}`, "_blank");
   };
@@ -213,7 +253,6 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
       opacity: open ? 1 : 0, pointerEvents: open ? "auto" : "none",
       transition: "opacity 0.5s var(--easing)",
     }} onClick={handleOverlayClick}>
-      {/* Video BG */}
       <div className="onboarding-bg" style={{
         position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
         display: "grid", gridTemplateColumns: "1fr 1fr", zIndex: 0,
@@ -240,7 +279,6 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
         }} />
       </div>
 
-      {/* Shield */}
       <div style={{ position: "relative", zIndex: 2, width: "460px", maxWidth: "92vw" }}>
         <div style={{
           position: "absolute", top: "-2px", left: "-2px",
@@ -249,7 +287,6 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
           background: "linear-gradient(180deg, #00FF88, rgba(0,255,136,0.3), rgba(0,255,136,0.08))",
           animation: "shield-pulse 3s infinite",
         }} />
-
         <div style={{
           position: "relative", clipPath: shieldClip,
           background: "linear-gradient(180deg, rgba(10,14,26,0.97) 0%, rgba(5,7,13,0.99) 100%)",
@@ -261,7 +298,7 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
             position: "absolute", top: "28px", right: "50px",
             background: "none", border: "none", color: "var(--text-secondary)",
             fontSize: "1.3rem", zIndex: 10, cursor: "pointer",
-          }}>✕</button>
+          }}>&#x2715;</button>
 
           <div style={{
             fontFamily: "'Teko', sans-serif", fontSize: "1.6rem",
@@ -274,7 +311,6 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
             color: "var(--text-secondary)", marginBottom: "1.5rem",
           }}>Enter The Arena</div>
 
-          {/* Progress icons */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1.8rem" }}>
             {[1, 2, 3].map((n, i) => {
               const IconComponent = stepIcons[i];
@@ -305,7 +341,6 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
 
           {error && <p style={{ color: "#FF4444", fontSize: "0.8rem", marginBottom: "0.5rem" }}>{error}</p>}
 
-          {/* Step 1: Connect Wallet */}
           {step === 1 && (
             <div style={{ animation: "stepFade 0.5s var(--easing)" }}>
               <h2 style={{
@@ -334,7 +369,6 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
             </div>
           )}
 
-          {/* Step 2: Connect Twitter */}
           {step === 2 && (
             <div style={{ animation: "stepFade 0.5s var(--easing)" }}>
               <div style={{
@@ -371,7 +405,6 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
             </div>
           )}
 
-          {/* Step 3: Share Referral */}
           {step === 3 && (
             <div style={{ animation: "stepFade 0.5s var(--easing)" }}>
               <div style={{
@@ -387,7 +420,7 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
               <h2 style={{
                 fontFamily: "'Teko', sans-serif", fontSize: "2rem",
                 textTransform: "uppercase", letterSpacing: "1px", marginBottom: "0.5rem",
-              }}>Share & Climb</h2>
+              }}>Share &amp; Climb</h2>
 
               <div style={{ display: "flex", gap: "6px", marginBottom: "0.5rem" }}>
                 <input ref={refInputRef} type="text" value={refLink} readOnly className="data-hover" style={{

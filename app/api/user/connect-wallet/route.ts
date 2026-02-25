@@ -27,7 +27,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ user: existing });
     }
 
-    // Insert new user with referred_by if they came via a ref link
     const { data, error } = await supabase
       .from("users")
       .insert({
