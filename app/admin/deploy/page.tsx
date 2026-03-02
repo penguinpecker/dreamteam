@@ -61,7 +61,7 @@ export default function AdminDeployPage() {
       const addr = user!.wallet!.address as `0x${string}`;
 
       const prize = PRIZE_STRUCTURES[contest.tier] || PRIZE_STRUCTURES.beginner;
-      const entryFeeUsdc = parseUnits(contest.entry_fee, 6);
+      const entryFeeUsdc = parseUnits(String(contest.entry_fee), 6);
       const commitDeadline = BigInt(Math.floor(new Date(contest.commit_deadline).getTime() / 1000));
       const revealDeadline = BigInt(Math.floor(new Date(contest.reveal_deadline).getTime() / 1000));
 
