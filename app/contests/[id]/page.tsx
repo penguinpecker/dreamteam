@@ -138,6 +138,10 @@ export default function ContestDetailPage() {
   // ── Submit Lineup ──────────────────────────────
   async function submitLineup() {
     if (!authenticated || !user?.wallet?.address || !contest) return;
+    if (!contest.contract_address || contest.contract_address === 'pending' || !contest.contract_address.startsWith('0x')) {
+      setTxStatus('Error: Contest contract not yet deployed on-chain. Check back soon.');
+      return;
+    }
     const wallet = wallets[0];
     if (!wallet) return;
 
