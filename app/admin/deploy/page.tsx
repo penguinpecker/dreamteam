@@ -56,6 +56,16 @@ export default function AdminDeployPage() {
 
     try {
       const provider = await wallet.getEthereumProvider();
+      
+      // Switch to Arbitrum if needed
+      try {
+        await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0xA4B1' }] });
+      } catch (switchErr: any) {
+        if (switchErr.code === 4902) {
+          await provider.request({ method: 'wallet_addEthereumChain', params: [{ chainId: '0xA4B1', chainName: 'Arbitrum One', rpcUrls: ['https://arb1.arbitrum.io/rpc'], nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 }, blockExplorerUrls: ['https://arbiscan.io'] }] });
+        }
+      }
+
       const wc = createWalletClient({ chain: arbitrum, transport: custom(provider) });
       const pc = createPublicClient({ chain: arbitrum, transport: http() });
       const addr = user!.wallet!.address as `0x${string}`;
