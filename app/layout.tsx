@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Web3Provider from "./components/Web3Provider";
-import AppNavbar from "./components/AppNavbar";
 
 export const metadata: Metadata = {
   title: "DreamTeam | Fantasy Cricket & Football",
@@ -18,7 +17,6 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <Web3Provider>
-          <AppNavbar />
           {children}
         </Web3Provider>
       </body>
