@@ -22,7 +22,7 @@ interface ContestRow {
 }
 
 // Only allow your wallet
-const ADMIN_ADDRESS = '0x31fc857d467aeec23d31ef7c89b0054eec49f711';
+const ADMIN_ADDRESS = '0x383604162e096f154FD79C631167F26e66f2cD6C';
 
 export default function AdminDeployPage() {
   const { authenticated, user } = usePrivy();
