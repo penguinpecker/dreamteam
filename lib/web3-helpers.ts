@@ -38,17 +38,17 @@ export function formatMatchDate(dateStr: string): string {
 
 // ── Positions ────────────────────────────────────
 export const CRICKET_POSITIONS: Record<string, { short: string; color: string; min: number; max: number }> = {
-  batsman:      { short: 'BAT',  color: '#FF6B6B', min: 1, max: 6 },
-  bowler:       { short: 'BOWL', color: '#4ECDC4', min: 1, max: 6 },
-  allrounder:   { short: 'AR',   color: '#45B7D1', min: 1, max: 4 },
-  wicketkeeper: { short: 'WK',   color: '#F7DC6F', min: 1, max: 2 },
+  BAT:      { short: 'BAT',  color: '#FF6B6B', min: 1, max: 6 },
+  BOWL:       { short: 'BOWL', color: '#4ECDC4', min: 1, max: 6 },
+  AR:   { short: 'AR',   color: '#45B7D1', min: 1, max: 4 },
+  WK: { short: 'WK',   color: '#F7DC6F', min: 1, max: 2 },
 };
 
 export const FOOTBALL_POSITIONS: Record<string, { short: string; color: string; min: number; max: number }> = {
-  goalkeeper: { short: 'GK',  color: '#F7DC6F', min: 1, max: 1 },
-  defender:   { short: 'DEF', color: '#4ECDC4', min: 3, max: 5 },
-  midfielder: { short: 'MID', color: '#45B7D1', min: 2, max: 5 },
-  forward:    { short: 'FWD', color: '#FF6B6B', min: 1, max: 3 },
+  GK: { short: 'GK',  color: '#F7DC6F', min: 1, max: 1 },
+  DEF:   { short: 'DEF', color: '#4ECDC4', min: 3, max: 5 },
+  MID: { short: 'MID', color: '#45B7D1', min: 2, max: 5 },
+  FWD:    { short: 'FWD', color: '#FF6B6B', min: 1, max: 3 },
 };
 
 // ── Validation ───────────────────────────────────
