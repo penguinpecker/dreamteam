@@ -12,7 +12,7 @@ import { formatMatchDate } from '@/lib/web3-helpers';
 interface UserEntry {
   id: string; contest_id: string; commitment_hash: string;
   lineup_revealed: boolean; player_ids: number[];
-  captain_index: number; vc_index: number; salt: string;
+  captain_index: number; vc_index: number; captain_id: number; vc_id: number; salt: string;
   total_points: number | null; rank: number | null;
   reward: number | null; claimed: boolean; created_at: string;
   contest: {
@@ -66,7 +66,7 @@ export default function MyContestsPage() {
       const tx = await wc.writeContract({
         address: entry.contest.contract_address as `0x${string}`,
         abi: CONTEST_ABI, functionName: 'revealLineup',
-        args: [padded, entry.captain_index, entry.vc_index, entry.salt as `0x${string}`],
+        args: [padded, BigInt(entry.captain_id), BigInt(entry.vc_id), entry.salt as `0x${string}`],
         account: user?.wallet?.address as `0x${string}`,
       });
       await pc.waitForTransactionReceipt({ hash: tx });
