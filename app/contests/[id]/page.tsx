@@ -156,8 +156,10 @@ export default function ContestDetailPage() {
       const fee = parseUSDC(contest.entry_fee.toString());
 
       const ids = selected.map(p => BigInt(p.sportmonks_id));
+      const captainId = BigInt(selected[captainIdx!].sportmonks_id);
+      const vcId = BigInt(selected[vcIdx!].sportmonks_id);
       const salt = generateSalt();
-      const commitment = computeLineupHash(ids, captainIdx!, vcIdx!, salt);
+      const commitment = computeLineupHash(ids, captainId, vcId, salt);
 
       setTxStatus('Approving USDC...');
       const allowance = await pc.readContract({ address: ADDRESSES.USDC, abi: USDC_ABI, functionName: 'allowance', args: [addr, contestAddr] });
@@ -174,11 +176,16 @@ export default function ContestDetailPage() {
       await supabase.from('user_contests').insert({
         user_address: addr.toLowerCase(), contest_id: contestId, commitment_hash: commitment,
         player_ids: selected.map(p => p.sportmonks_id), captain_index: captainIdx, vc_index: vcIdx,
+        captain_id: selected[captainIdx!].sportmonks_id, vc_id: selected[vcIdx!].sportmonks_id,
         salt, lineup_revealed: false, claimed: false,
       });
 
+      // Update contest stats
+      await supabase.rpc('increment_contest_stats', { cid: contestId, fee: contest!.entry_fee });
+
       setTxStatus('');
       setHasJoined(true);
+      setContest(prev => prev ? { ...prev, participant_count: prev.participant_count + 1, prize_pool: prev.prize_pool + prev.entry_fee } : prev);
     } catch (err: any) {
       setTxStatus(`Error: ${err.message?.slice(0, 100)}`);
     } finally { setTxLoading(false); }
