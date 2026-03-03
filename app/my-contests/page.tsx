@@ -34,6 +34,8 @@ export default function MyContestsPage() {
   const [tab, setTab] = useState<'active' | 'completed'>('active');
   const [actionId, setActionId] = useState<string | null>(null);
   const [actionStatus, setActionStatus] = useState('');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [playerCache, setPlayerCache] = useState<Record<number, { name: string; position: string; team: string }>>({});
 
   useEffect(() => {
     if (user?.wallet?.address) loadEntries();
@@ -49,6 +51,23 @@ export default function MyContestsPage() {
         .order('created_at', { ascending: false });
       setEntries(data || []);
     } catch (err) { console.error(err); } finally { setLoading(false); }
+  }
+
+  async function toggleExpand(entry: UserEntry) {
+    if (expandedId === entry.id) { setExpandedId(null); return; }
+    setExpandedId(entry.id);
+    const missing = entry.player_ids.filter(id => !playerCache[id]);
+    if (missing.length > 0) {
+      const { data } = await supabase
+        .from('players')
+        .select('sportmonks_id, name, position, team')
+        .in('sportmonks_id', missing);
+      if (data) {
+        const newCache = { ...playerCache };
+        data.forEach(p => { newCache[p.sportmonks_id] = { name: p.name, position: p.position, team: p.team }; });
+        setPlayerCache(newCache);
+      }
+    }
   }
 
   async function revealLineup(entry: UserEntry) {
@@ -172,7 +191,8 @@ export default function MyContestsPage() {
               const isLive = ['live', 'inplay', '1st innings', '2nd innings'].includes(match.status?.toLowerCase() || '');
 
               return (
-                <div key={entry.id} className="rounded-xl border border-white/[0.05] bg-white/[0.015] p-5">
+                <div key={entry.id} className="rounded-xl border border-white/[0.05] bg-white/[0.015] overflow-hidden">
+                  <div className="p-5 cursor-pointer hover:bg-white/[0.01] transition" onClick={() => toggleExpand(entry)}>
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <span className="text-sm">{match.sport === 'cricket' ? '🏏' : '⚽'}</span>
@@ -180,7 +200,10 @@ export default function MyContestsPage() {
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: stateColor + '20', color: stateColor }}>{stateLabel}</span>
                       {isLive && <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 font-bold animate-pulse">● LIVE</span>}
                     </div>
-                    <span className="text-[10px] text-white/15">{formatMatchDate(match.starts_at)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-white/15">{formatMatchDate(match.starts_at)}</span>
+                      <span className="text-white/20 text-xs">{expandedId === entry.id ? '▲' : '▼'}</span>
+                    </div>
                   </div>
 
                   <h3 className="text-xl font-bold mb-3" style={{ fontFamily: 'Teko, sans-serif' }}>
@@ -207,24 +230,54 @@ export default function MyContestsPage() {
                       </Link>
                     )}
                     {needsReveal && (
-                      <button onClick={() => revealLineup(entry)} disabled={actionId === entry.id}
+                      <button onClick={(e) => { e.stopPropagation(); revealLineup(entry); }} disabled={actionId === entry.id}
                         className="px-5 py-2 rounded-lg bg-yellow-400 text-black text-[12px] font-bold disabled:opacity-50">
                         {actionId === entry.id ? 'Revealing...' : 'Reveal Lineup'}
                       </button>
                     )}
                     {canClaim && (
-                      <button onClick={() => claimReward(entry)} disabled={actionId === entry.id}
+                      <button onClick={(e) => { e.stopPropagation(); claimReward(entry); }} disabled={actionId === entry.id}
                         className="px-5 py-2 rounded-lg bg-[#00FF87] text-black text-[12px] font-bold disabled:opacity-50">
                         {actionId === entry.id ? 'Claiming...' : `Claim $${entry.reward}`}
                       </button>
                     )}
                     {canRefund && (
-                      <button onClick={() => claimReward(entry)} disabled={actionId === entry.id}
+                      <button onClick={(e) => { e.stopPropagation(); claimReward(entry); }} disabled={actionId === entry.id}
                         className="px-5 py-2 rounded-lg bg-red-400/80 text-black text-[12px] font-bold disabled:opacity-50">
                         {actionId === entry.id ? 'Refunding...' : 'Claim Refund'}
                       </button>
                     )}
                   </div>
+                  </div>
+
+                  {expandedId === entry.id && (
+                    <div className="border-t border-white/[0.05] bg-white/[0.01] px-5 py-4">
+                      <div className="text-[11px] text-white/30 uppercase tracking-wider mb-3 font-semibold">Your Lineup</div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                        {entry.player_ids.map((pid, idx) => {
+                          const p = playerCache[pid];
+                          const isCaptain = pid === entry.captain_id || idx === entry.captain_index;
+                          const isVC = pid === entry.vc_id || idx === entry.vc_index;
+                          return (
+                            <div key={pid} className={`flex items-center gap-3 px-3 py-2 rounded-lg ${
+                              isCaptain ? 'bg-[#00FF87]/[0.06] border border-[#00FF87]/20' :
+                              isVC ? 'bg-yellow-400/[0.04] border border-yellow-400/15' :
+                              'bg-white/[0.02] border border-white/[0.03]'
+                            }`}>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-[13px] font-semibold truncate">
+                                  {p?.name || `Player #${pid}`}
+                                  {isCaptain && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-[#00FF87]/20 text-[#00FF87] font-bold">C</span>}
+                                  {isVC && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-yellow-400/20 text-yellow-400 font-bold">VC</span>}
+                                </div>
+                                {p && <div className="text-[10px] text-white/25">{p.position} · {p.team}</div>}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
