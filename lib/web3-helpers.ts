@@ -1,13 +1,14 @@
 import { encodePacked, keccak256, parseUnits, formatUnits } from 'viem';
 
 // ── Lineup Commitment (must match Contest.sol) ───
+// On-chain: keccak256(abi.encodePacked(playerIds[0..10], captainId, viceCaptainId, salt))
 export function computeLineupHash(
-  playerIds: bigint[], captainIndex: number, viceCaptainIndex: number, salt: `0x${string}`
+  playerIds: bigint[], captainId: bigint, viceCaptainId: bigint, salt: `0x${string}`
 ): `0x${string}` {
   if (playerIds.length !== 11) throw new Error('Must have exactly 11 players');
   return keccak256(encodePacked(
-    ['uint256','uint256','uint256','uint256','uint256','uint256','uint256','uint256','uint256','uint256','uint256','uint8','uint8','bytes32'],
-    [...playerIds, captainIndex, viceCaptainIndex, salt] as any
+    ['uint256','uint256','uint256','uint256','uint256','uint256','uint256','uint256','uint256','uint256','uint256','uint256','uint256','bytes32'],
+    [...playerIds, captainId, viceCaptainId, salt] as any
   ));
 }
 
@@ -38,17 +39,17 @@ export function formatMatchDate(dateStr: string): string {
 
 // ── Positions ────────────────────────────────────
 export const CRICKET_POSITIONS: Record<string, { short: string; color: string; min: number; max: number }> = {
-  BAT:      { short: 'BAT',  color: '#FF6B6B', min: 1, max: 6 },
-  BOWL:       { short: 'BOWL', color: '#4ECDC4', min: 1, max: 6 },
+  BAT:  { short: 'BAT',  color: '#FF6B6B', min: 1, max: 6 },
+  BOWL: { short: 'BOWL', color: '#4ECDC4', min: 1, max: 6 },
   AR:   { short: 'AR',   color: '#45B7D1', min: 1, max: 4 },
-  WK: { short: 'WK',   color: '#F7DC6F', min: 1, max: 2 },
+  WK:   { short: 'WK',   color: '#F7DC6F', min: 1, max: 2 },
 };
 
 export const FOOTBALL_POSITIONS: Record<string, { short: string; color: string; min: number; max: number }> = {
-  GK: { short: 'GK',  color: '#F7DC6F', min: 1, max: 1 },
-  DEF:   { short: 'DEF', color: '#4ECDC4', min: 3, max: 5 },
+  GK:  { short: 'GK',  color: '#F7DC6F', min: 1, max: 1 },
+  DEF: { short: 'DEF', color: '#4ECDC4', min: 3, max: 5 },
   MID: { short: 'MID', color: '#45B7D1', min: 2, max: 5 },
-  FWD:    { short: 'FWD', color: '#FF6B6B', min: 1, max: 3 },
+  FWD: { short: 'FWD', color: '#FF6B6B', min: 1, max: 3 },
 };
 
 // ── Validation ───────────────────────────────────
