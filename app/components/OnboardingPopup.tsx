@@ -321,9 +321,9 @@ export default function OnboardingPopup({ open, onClose }: OnboardingPopupProps)
 
   const shareOnTwitter = () => {
     const text = encodeURIComponent(
-      `I just secured my spot in the DreamTeam fantasy arena \u{1F3CF}\u{26BD}\u{1F6E1}\n\nJoin with my link and we both climb the leaderboard:\nhttps://${refLink}\n\n#DreamTeam #FantasySports #Web3`
+      `I just secured my spot in the @dreamteam_xyz fantasy arena \u{1F3CF}\u{26BD}\u{1F6E1}\n\nJoin with my link and we both climb the leaderboard:\nhttps://${refLink}\n\n#DreamTeam #FantasySports #Web3`
     );
-    window.open(`https://twitter.com/intent/tweet?text=${text}`, "_blank");
+    window.open(`https://x.com/intent/tweet?text=${text}`, "_blank");
   };
 
   const handleOverlayClick = (e: React.MouseEvent) => {

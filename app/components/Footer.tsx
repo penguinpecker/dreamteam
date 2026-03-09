@@ -1,5 +1,10 @@
 export default function Footer() {
-  const links = ["Terms", "Privacy", "Discord", "Twitter"];
+  const links = [
+    { label: "Terms", href: "#" },
+    { label: "Privacy", href: "#" },
+    { label: "Discord", href: "#" },
+    { label: "X / Twitter", href: "https://x.com/dreamteam_xyz", external: true },
+  ];
 
   return (
     <footer
@@ -20,8 +25,9 @@ export default function Footer() {
       <div className="flex gap-[30px]">
         {links.map((l) => (
           <a
-            key={l}
-            href="#"
+            key={l.label}
+            href={l.href}
+            {...(l.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
             className="data-hover no-underline transition-colors duration-300"
             style={{
               color: "var(--text-secondary)",
@@ -36,7 +42,7 @@ export default function Footer() {
               (e.currentTarget.style.color = "var(--text-secondary)")
             }
           >
-            {l}
+            {l.label}
           </a>
         ))}
       </div>
