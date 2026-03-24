@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Web3Provider from "./components/Web3Provider";
+import CustomCursor from "./components/CustomCursor";
 
 export const metadata: Metadata = {
   title: "DreamTeam | Fantasy Cricket & Football",
@@ -32,6 +33,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        <CustomCursor />
         <Web3Provider>
           {children}
         </Web3Provider>
