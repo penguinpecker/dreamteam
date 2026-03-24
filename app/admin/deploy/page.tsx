@@ -52,9 +52,16 @@ export default function AdminDeployPage() {
   useEffect(() => { loadContests(); }, []);
 
   async function loadContests() {
+    const ACTIVE_IDS = [67089, 69472, 69473, 69474, 69605];
+    const { data: matchRows } = await supabase
+      .from('matches')
+      .select('id')
+      .in('sportmonks_id', ACTIVE_IDS);
+    const matchIds = (matchRows || []).map((m: any) => m.id);
     const { data } = await supabase
       .from('contests')
       .select('*, match:matches(sportmonks_id, team_home, team_away, starts_at, sport, format)')
+      .in('match_id', matchIds)
       .order('commit_deadline', { ascending: true });
     setContests(data || []);
     setLoading(false);
