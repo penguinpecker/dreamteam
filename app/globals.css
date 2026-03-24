@@ -312,3 +312,64 @@ body {
   from { transform: translate(-50%, -50%) rotate(0deg); }
   to   { transform: translate(-50%, -50%) rotate(360deg); }
 }
+
+/* ── Cursor — Crosshair Reticle ── */
+* { cursor: none !important; }
+
+#cursor-dot {
+  position: fixed;
+  width: 6px; height: 6px;
+  background: var(--accent-neon);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 99999;
+  transform: translate(-50%, -50%);
+  transition: width 0.15s, height 0.15s, background 0.15s;
+  box-shadow: 0 0 6px var(--accent-neon), 0 0 12px rgba(0,255,135,0.4);
+}
+#cursor-dot.hovered {
+  width: 4px; height: 4px;
+  background: #fff;
+  box-shadow: 0 0 8px #fff;
+}
+#cursor-ring {
+  position: fixed;
+  width: 36px; height: 36px;
+  border: 1px solid rgba(0,255,135,0.25);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 99998;
+  transform: translate(-50%, -50%);
+  animation: cursor-spin 4s linear infinite;
+  box-shadow: 0 0 0 1px rgba(0,255,135,0.06);
+}
+#cursor-ring::before {
+  content: '';
+  position: absolute;
+  width: 8px; height: 1.5px;
+  background: var(--accent-neon);
+  opacity: 0.85;
+  top: 50%; left: -2px;
+  transform: translateY(-50%);
+  box-shadow: 28px 0 0 var(--accent-neon);
+}
+#cursor-ring::after {
+  content: '';
+  position: absolute;
+  width: 1.5px; height: 8px;
+  background: var(--accent-neon);
+  opacity: 0.85;
+  left: 50%; top: -2px;
+  transform: translateX(-50%);
+  box-shadow: 0 28px 0 var(--accent-neon);
+}
+#cursor-ring.hovered {
+  width: 52px; height: 52px;
+  border-color: rgba(0,255,135,0.5);
+  box-shadow: 0 0 16px rgba(0,255,135,0.2);
+  animation: cursor-spin 1.2s linear infinite;
+}
+@keyframes cursor-spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg); }
+}
